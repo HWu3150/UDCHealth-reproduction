@@ -431,6 +431,35 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
             print("{}: {:4f}".format(key, scores[key]))
     _wandb_log(scores, 'udc')
 
+    def _save_results(scores, out_path):
+        import json
+        metric_keys = ['jaccard_samples', 'f1_micro', 'precision_samples', 'recall_samples', 'avg_drug']
+        summary = {k: float(scores[k]) for k in metric_keys if k in scores}
+        print("\n===== Inference Metrics =====")
+        for k, v in summary.items():
+            print("  {}: {:.4f}".format(k, v))
+        with open(os.path.join(out_path, 'metrics.json'), 'w') as f:
+            json.dump(summary, f, indent=2)
+        print("Metrics saved to", os.path.join(out_path, 'metrics.json'))
+
+        y_true_all, y_prob_all, _ = trainer.inference(test_dataloader)
+        threshold = config['THRES'] if 'THRES' in config else 0.4
+        y_pred_all = (y_prob_all >= threshold).astype(int)
+        idx2token = model.label_tokenizer.vocabulary.idx2token
+        records = [
+            {'gold': [idx2token[i] for i, v in enumerate(yt) if v == 1],
+             'pred': [idx2token[i] for i, v in enumerate(yp) if v == 1]}
+            for yt, yp in zip(y_true_all, y_pred_all)
+        ]
+        pred_gold_path = os.path.join(out_path, 'pred_gold.jsonl')
+        with open(pred_gold_path, 'w') as f:
+            for r in records:
+                f.write(json.dumps(r) + '\n')
+        print("Pred-gold saved to", pred_gold_path)
+
+    if not tuning:
+        _save_results(scores, out_exp_path)
+        return model
 
     if tuning:
         print("=====tuning start:")
@@ -468,37 +497,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
                               )
     print(scores)
     _wandb_log(scores, 'udc_tuned')
-
-    # Save metrics summary + pred-gold file
-    if out_exp_path is not None:
-        import json
-
-        # ── metrics ──────────────────────────────────────────────
-        metric_keys = ['jaccard_samples', 'f1_micro', 'precision_samples', 'recall_samples', 'avg_drug']
-        summary = {k: float(scores[k]) for k in metric_keys if k in scores}
-        print("\n===== Inference Metrics =====")
-        for k, v in summary.items():
-            print("  {}: {:.4f}".format(k, v))
-        metrics_path = os.path.join(out_exp_path, 'metrics.json')
-        with open(metrics_path, 'w') as f:
-            json.dump(summary, f, indent=2)
-        print("Metrics saved to", metrics_path)
-
-        # ── pred-gold ─────────────────────────────────────────────
-        y_true_all, y_prob_all, _ = trainer.inference(test_dataloader)
-        threshold = trainer.model.config['THRES'] if hasattr(trainer.model, 'config') else 0.4
-        y_pred_all = (y_prob_all >= threshold).astype(int)
-        idx2token = model.label_tokenizer.vocabulary.idx2token
-        records = []
-        for y_true, y_pred in zip(y_true_all, y_pred_all):
-            gold = [idx2token[i] for i, v in enumerate(y_true) if v == 1]
-            pred = [idx2token[i] for i, v in enumerate(y_pred) if v == 1]
-            records.append({'gold': gold, 'pred': pred})
-        pred_gold_path = os.path.join(out_exp_path, 'pred_gold.jsonl')
-        with open(pred_gold_path, 'w') as f:
-            for r in records:
-                f.write(json.dumps(r) + '\n')
-        print("Pred-gold saved to", pred_gold_path)
+    _save_results(scores, out_exp_path)
 
     return model
 
