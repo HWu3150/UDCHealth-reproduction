@@ -35,7 +35,10 @@ set_random_seed(config['SEED'])
 
 
 # @profile(precision=4, stream=open("memory_profiler.log", "w+"))
-def run_single_config(pretrain=False, tuning=False,  exp_num=''):
+def run_single_config(pretrain=False, tuning=False, exp_num='', ckpt_exp_num=None):
+    # ckpt_exp_num: exp_num used for loading PCF/DRL checkpoints (no threshold suffix)
+    if ckpt_exp_num is None:
+        ckpt_exp_num = exp_num
     # GPU 占用
     a = torch.ones((10000, 50000)).to('cuda:' + config['GPU'])
     print("GPU Memory Usage", torch.cuda.memory_allocated('cuda:' + config['GPU']) / 1024 / 1024 / 1024, "GB")
@@ -192,14 +195,14 @@ def run_single_config(pretrain=False, tuning=False,  exp_num=''):
         # print(sample_dataset.get_all_tokens(key='conditions'))
         start = time.time()
         # joint时候要注释掉
-        pcf_model = load_pretrain_pcf(sample_dataset, config, special_input=train_dataset, exp_num=exp_num) # 这里为啥不能同时sampledataset 一旦initial两次？，rarmed的时候，这里会出问题；直接注释掉上面的
-        plm_model, drl_model = run_pretrain_drl(disease, sample_dataset, train_dataset, test_dataloader, pcf_model, config, exp_num=exp_num)
+        pcf_model = load_pretrain_pcf(sample_dataset, config, special_input=train_dataset, exp_num=ckpt_exp_num)
+        plm_model, drl_model = run_pretrain_drl(disease, sample_dataset, train_dataset, test_dataloader, pcf_model, config, exp_num=ckpt_exp_num)
         end = time.time()
         print("Pretrain DRL done! Cost {} s".format(end - start))
     else:
-        pcf_model = load_pretrain_pcf(sample_dataset, config, special_input=train_dataset, exp_num=exp_num) # 因为只训一次
-        plm_model = load_pretrain_plm(config, exp_num=exp_num)
-        drl_model = load_pretrain_drl(pcf_model, plm_model, config, exp_num=exp_num)
+        pcf_model = load_pretrain_pcf(sample_dataset, config, special_input=train_dataset, exp_num=ckpt_exp_num)
+        plm_model = load_pretrain_plm(config, exp_num=ckpt_exp_num)
+        drl_model = load_pretrain_drl(pcf_model, plm_model, config, exp_num=ckpt_exp_num)
         print("Load Pretrain Done!")
 
     # aug inference
@@ -240,6 +243,8 @@ if __name__ == '__main__':
 
     if args.gpu is not None:
         config['GPU'] = args.gpu
+
+    ckpt_exp_num = args.exp_num  # base exp_num for loading PCF/DRL checkpoints
     if args.thres is not None:
         config['THRES'] = args.thres
         args.exp_num = args.exp_num + '_t{}'.format(str(args.thres).replace('.', ''))
@@ -262,7 +267,7 @@ if __name__ == '__main__':
 
     print("Hi, This is UDC Health!")
     print("You are running on", config['DATASET'], "dataset! THRES={}".format(config['THRES']))
-    run_single_config(pretrain=args.pretrain, tuning=args.tuning, exp_num=args.exp_num)
+    run_single_config(pretrain=args.pretrain, tuning=args.tuning, exp_num=args.exp_num, ckpt_exp_num=ckpt_exp_num)
 
     if args.use_wandb and _wandb is not None and _wandb.run is not None:
         _wandb.finish()
