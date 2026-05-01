@@ -2,7 +2,6 @@ import itertools
 import time
 import pandas as pd
 import torch
-import dgl
 import os
 import math
 import pkg_resources
