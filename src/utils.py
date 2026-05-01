@@ -461,7 +461,7 @@ def get_name_map(config):
         diag_id2_name.update(name_map_diag)
         proc_id2_name.update(name_map_proc)
         # ATC-L4 drug names from DrugDoctor hierarchy file
-        hierarchy_path = os.path.join(config['DRUGDOCTOR_DIR'], 'data', 'input', 'atc_hierarchy.csv')
+        hierarchy_path = os.path.join(config['DATA_INPUT'], 'atc_hierarchy.csv')
         atc_df = pd.read_csv(hierarchy_path)
         drug_id2_name.update(dict(zip(atc_df['ATC_L4_Code'], atc_df['ATC_L4_Name'])))
         print("CUSTOM name map loaded")

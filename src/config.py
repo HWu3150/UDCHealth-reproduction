@@ -9,8 +9,8 @@
 # Description：
 """
 import os as _os
-_PROJECT_ROOT   = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))  # UDCHealth/
-_DRUGDOCTOR_ROOT = _os.path.normpath(_os.path.join(_PROJECT_ROOT, '..', 'DrugDoctor'))
+_PROJECT_ROOT = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))  # UDCHealth/
+_DATA_INPUT   = _os.path.join(_PROJECT_ROOT, 'data', 'input')
 
 pcf_config = {
     'Transformer' : {
@@ -364,8 +364,8 @@ class UDCDRECConfig():
     N_EMBED = 64
 
     # log
-    LOGDIR = _os.path.join(_PROJECT_ROOT, 'log', 'ckpt') + '/'
-    DRUGDOCTOR_DIR = _DRUGDOCTOR_ROOT
+    LOGDIR     = _os.path.join(_PROJECT_ROOT, 'log', 'ckpt') + '/'
+    DATA_INPUT = _DATA_INPUT
 
 
 

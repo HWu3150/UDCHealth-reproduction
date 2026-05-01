@@ -7,9 +7,8 @@ echo "=== [1/6] numpy < 2.0 (binary compat fix) ==="
 pip install "numpy<2.0" --force-reinstall
 
 echo ""
-echo "=== [2/6] PyTorch (aarch64, CUDA 12.4 runtime — driver 13.0 is backward compatible) ==="
-pip install torch torchvision \
-    --index-url https://download.pytorch.org/whl/cu124
+echo "=== [2/6] PyTorch (aarch64, nightly cu128 — required for Blackwell sm_121) ==="
+pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cu128
 
 echo ""
 echo "=== [3/6] transformers ==="

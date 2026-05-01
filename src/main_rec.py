@@ -81,8 +81,8 @@ def run_single_config(pretrain=False, tuning=False,  exp_num=''):
             sample_dataset = base_dataset.set_task(drug_recommendation_mimic4_fn_wc)
             sample_dataset.stat()
         elif config['DATASET'] == 'CUSTOM':
-            RECORDS_PATH = os.path.join(config['DRUGDOCTOR_DIR'], 'data', 'output', 'records_final.pkl')
-            VOC_PATH     = os.path.join(config['DRUGDOCTOR_DIR'], 'data', 'output', 'voc_final.pkl')
+            RECORDS_PATH = os.path.join(config['DATA_INPUT'], 'records_final.pkl')
+            VOC_PATH     = os.path.join(config['DATA_INPUT'], 'voc_final.pkl')
             samples = load_custom_dataset(RECORDS_PATH, VOC_PATH)
             save_pickle(samples, root_to + 'datasets_pre_stand.pkl')
             print("Custom dataset saved! {} samples total".format(len(samples)))
