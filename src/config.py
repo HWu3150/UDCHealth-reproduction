@@ -5,9 +5,13 @@
 # File       : config.py
 # Time       ：3/7/2024 11:29 am
 # Author     ：xxxxx
-# version    ：python 
+# version    ：python
 # Description：
 """
+import os as _os
+_PROJECT_ROOT   = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))  # UDCHealth/
+_DRUGDOCTOR_ROOT = _os.path.normpath(_os.path.join(_PROJECT_ROOT, '..', 'DrugDoctor'))
+
 pcf_config = {
     'Transformer' : {
         'EPOCH': 30,
@@ -328,22 +332,22 @@ class UDCDRECConfig():
     DEV = False # 是否使用sample子集
     MODEL = "UDC"
     TASK = 'REC'
-    DATASET = 'MIII' # MIMIMC-III, MIMIC-IV , eICU, OMOP, PIC, OMIX
+    DATASET = 'CUSTOM' # MIMIMC-III, MIMIC-IV , eICU, OMOP, PIC, OMIX, CUSTOM
     PCF_MODEL = 'Transformer' # Transformer, SHAPE, DEPOT,StratMed,RAREMED | COGNET
     FEATURE = ['conditions', 'procedures', 'drugs'] # drug_HIST两层含义
     LABEL = 'labels'
     PCF_CONFIG = pcf_rec_config[PCF_MODEL]
     PLM_MODEL = 'Sap-BERT'
 
-    ATCLEVEL = 3
+    ATCLEVEL = 4
     RATIO = 0.6
     THRES = 0.4 # pred threshold
-    RARE_THRES = 0.8 # rare disease threshold； 
+    RARE_THRES = 0.8 # rare disease threshold；
 
     # train parameter
     SEED = 528
     USE_CUDA = True
-    GPU = '3'
+    GPU = '0'
     EPOCH = 50 #
     DIM = 128
     HIDDEN = 256
@@ -360,7 +364,8 @@ class UDCDRECConfig():
     N_EMBED = 64
 
     # log
-    LOGDIR = '/home/xxxx/UDCHealth/log/ckpt/'
+    LOGDIR = _os.path.join(_PROJECT_ROOT, 'log', 'ckpt') + '/'
+    DRUGDOCTOR_DIR = _DRUGDOCTOR_ROOT
 
 
 

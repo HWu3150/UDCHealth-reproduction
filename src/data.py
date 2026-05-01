@@ -1035,3 +1035,85 @@ if __name__ == '__main__':
     print(id_index)
 
 
+def load_custom_dataset(records_path, voc_path):
+    """Load two-visit EHR dataset from DrugDoctor's preprocessed pkl files.
+
+    Follows the same sample-building logic as drug_recommendation_mimic3_fn_wc so
+    the output is drop-in compatible with the rest of the UDCHealth pipeline.
+    """
+    import dill
+    import sys
+    import types
+
+    # voc_final.pkl was pickled under the src.util module namespace; mock it
+    if 'src.util' not in sys.modules:
+        _src = types.ModuleType('src')
+        _util = types.ModuleType('src.util')
+        class _Voc:
+            def __init__(self): self.idx2word = {}; self.word2idx = {}
+        _util.Voc = _Voc
+        _src.util = _util
+        sys.modules.setdefault('src', _src)
+        sys.modules['src.util'] = _util
+
+    voc = dill.load(open(voc_path, 'rb'))
+    diag_voc, pro_voc, med_voc = voc['diag_voc'], voc['pro_voc'], voc['med_voc']
+    records = dill.load(open(records_path, 'rb'))
+
+    samples = []
+    for patient_idx, patient_visits in enumerate(records):
+        patient_id = str(patient_idx)
+
+        # Decode integer indices → string codes; skip visits with any empty field
+        decoded = []
+        for visit in patient_visits:
+            diag = [diag_voc.idx2word[i] for i in visit[0]]
+            proc = [pro_voc.idx2word[i]  for i in visit[1]]
+            med  = [med_voc.idx2word[i]  for i in visit[2]]
+            if len(diag) * len(proc) * len(med) == 0:
+                continue
+            decoded.append((diag, proc, med))
+
+        if len(decoded) < 1:
+            continue
+
+        # Build per-visit samples (mirrors drug_recommendation_mimic3_fn_wc)
+        visit_samples = []
+        for i, (diag, proc, med) in enumerate(decoded):
+            visit_samples.append({
+                "visit_id": "{}_{}".format(patient_id, i),
+                "patient_id": patient_id,
+                "conditions": diag,
+                "procedures": proc,
+                "drugs": med,
+                "drugs_hist": med,
+                "conditions_wc": diag,
+                "labels": med,
+            })
+
+        # Wrap first visit fields in a list
+        visit_samples[0]["conditions"]    = [visit_samples[0]["conditions"]]
+        visit_samples[0]["procedures"]    = [visit_samples[0]["procedures"]]
+        visit_samples[0]["drugs_hist"]    = [visit_samples[0]["drugs_hist"]]
+        visit_samples[0]["conditions_wc"] = [visit_samples[0]["conditions_wc"]]
+
+        # Accumulate history across visits
+        for i in range(1, len(visit_samples)):
+            visit_samples[i]["conditions"]    = visit_samples[i-1]["conditions"]    + [visit_samples[i]["conditions"]]
+            visit_samples[i]["procedures"]    = visit_samples[i-1]["procedures"]    + [visit_samples[i]["procedures"]]
+            visit_samples[i]["drugs_hist"]    = visit_samples[i-1]["drugs_hist"]    + [visit_samples[i]["drugs_hist"]]
+            visit_samples[i]["conditions_wc"] = visit_samples[i-1]["conditions_wc"] + [visit_samples[i]["conditions_wc"]]
+
+        # Remove target-visit drugs from history; temporal-align padding to front
+        for i in range(len(visit_samples)):
+            visit_samples[i]["drugs_hist"][i] = ['<pad>', '<pad>', '<pad>']
+            visit_samples[i]["drugs_hist"] = (
+                [visit_samples[i]["drugs_hist"][i]] + visit_samples[i]["drugs_hist"][:i]
+            )
+
+        samples.extend(visit_samples)
+
+    print("Custom dataset loaded: {} patients, {} samples".format(len(records), len(samples)))
+    return samples
+
+

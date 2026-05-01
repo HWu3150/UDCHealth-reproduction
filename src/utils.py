@@ -454,7 +454,17 @@ def get_name_map(config):
         diag_id2_name.update(name_map_diag)
         print("EICU处理成功")
         # proc_id2_name.update(name_map_proc)
-   
+    elif config['DATASET'] == 'CUSTOM':
+        # ICD-10-CM diagnoses and ICD-10-PCS procedures (same code systems as MIMIC-IV)
+        name_map_diag = get_node_name('ICD10CM')
+        name_map_proc = get_node_name('ICD10PROC')
+        diag_id2_name.update(name_map_diag)
+        proc_id2_name.update(name_map_proc)
+        # ATC-L4 drug names from DrugDoctor hierarchy file
+        hierarchy_path = os.path.join(config['DRUGDOCTOR_DIR'], 'data', 'input', 'atc_hierarchy.csv')
+        atc_df = pd.read_csv(hierarchy_path)
+        drug_id2_name.update(dict(zip(atc_df['ATC_L4_Code'], atc_df['ATC_L4_Name'])))
+        print("CUSTOM name map loaded")
 
     return diag_id2_name, proc_id2_name, drug_id2_name
 

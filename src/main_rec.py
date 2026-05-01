@@ -16,7 +16,7 @@ import time
 import torch
 from pyhealth.datasets import MIMIC3Dataset, MIMIC4Dataset, SampleEHRDataset, eICUDataset, OMOPDataset
 from utils import split_by_patient, load_pickle, save_pickle, set_random_seed, generate_rare_disease, ana_rare_disease, get_tokenizers, generate_rare_patient
-from data import drug_recommendation_mimic3_fn_wc, drug_recommendation_mimic4_fn_wc, drug_recommendation_eicu_fn_wc, re_generate_dataset, convert_dataset
+from data import drug_recommendation_mimic3_fn_wc, drug_recommendation_mimic4_fn_wc, drug_recommendation_eicu_fn_wc, re_generate_dataset, convert_dataset, load_custom_dataset
 from data import drug_recommendation_omop_fn_wc, drug_recommendation_pic_fn_wc, drug_recommendation_omix_fn_wc
 
 from loader import get_dataloader, raremed_mask_nsp_collate_fn, collate_fn_dict
@@ -37,7 +37,8 @@ def run_single_config(pretrain=False, tuning=False,  exp_num=''):
     
     # load datasets
     # STEP 1: load data
-    root_to = '/home/xxxx/UDCHealth/data/{}/{}/processed/'.format(config['TASK'], config['DATASET'])
+    _src_dir = os.path.dirname(os.path.abspath(__file__))
+    root_to = os.path.join(os.path.dirname(_src_dir), 'data', config['TASK'], config['DATASET'], 'processed') + '/'
     if not os.path.exists(root_to + 'datasets_pre_stand.pkl'):
         if config['DATASET'] == 'MIII':
             base_dataset = MIMIC3Dataset(
@@ -74,6 +75,14 @@ def run_single_config(pretrain=False, tuning=False,  exp_num=''):
             # set task
             sample_dataset = base_dataset.set_task(drug_recommendation_mimic4_fn_wc)
             sample_dataset.stat()
+        elif config['DATASET'] == 'CUSTOM':
+            RECORDS_PATH = os.path.join(config['DRUGDOCTOR_DIR'], 'data', 'output', 'records_final.pkl')
+            VOC_PATH     = os.path.join(config['DRUGDOCTOR_DIR'], 'data', 'output', 'voc_final.pkl')
+            samples = load_custom_dataset(RECORDS_PATH, VOC_PATH)
+            save_pickle(samples, root_to + 'datasets_pre_stand.pkl')
+            print("Custom dataset saved! {} samples total".format(len(samples)))
+            print("Please run again!")
+            return
         else:
             print("No such dataset!")
             return
