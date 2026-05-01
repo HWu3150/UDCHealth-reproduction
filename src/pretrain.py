@@ -362,7 +362,11 @@ def run_pretrain_drl(disease, sample_dataset, train_dataset, test_dataloader, pc
 
 
 
-def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, test_dataloader, config, y_grouped=None, p_grouped=None, special_input=None, tuning=False, exp_num='',**kwargs):
+def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, test_dataloader, config, y_grouped=None, p_grouped=None, special_input=None, tuning=False, exp_num='', ckpt_exp_num=None, **kwargs):
+    # ckpt_exp_num: checkpoint path (no threshold suffix); exp_num: output path (may include threshold suffix)
+    if ckpt_exp_num is None:
+        ckpt_exp_num = exp_num
+
     model = UDCHealth(
         dataset,
         pcf_model,
@@ -386,17 +390,21 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
         metrics = ['jaccard_samples', 'f1_samples', 'pr_auc_samples', 'roc_auc_samples', 'precision_samples',
                    'recall_samples']+['topk_acc', 'topk_precision']
 
+    output_base = config['LOGDIR'] + config['TASK'] + '/'
+    ckpt_exp_name = config['DATASET'] + '-' + config['PCF_MODEL'] + '-udc-' + ckpt_exp_num
+    out_exp_name  = config['DATASET'] + '-' + config['PCF_MODEL'] + '-udc-' + exp_num
+
+    # Trainer uses ckpt path for saving/loading during tuning
     trainer = Trainer(
         model=model,
-        metrics=metrics,  # 换指标
+        metrics=metrics,
         device='cuda:' + config['GPU'] if config['USE_CUDA'] else 'cpu',
-        output_path=config['LOGDIR'] + config['TASK'] + '/',
-        exp_name=config['DATASET'] + '-' + config['PCF_MODEL'] + '-udc' + '-' + exp_num,
-
+        output_path=output_base,
+        exp_name=ckpt_exp_name,
     )
     config = config['PCF_CONFIG']
 
-    # Load tuned checkpoint for pure inference runs
+    # For pure inference: load tuned checkpoint (must exist)
     if not tuning and trainer.exp_path is not None:
         ckpt = os.path.join(trainer.exp_path, 'best.ckpt')
         if not os.path.isfile(ckpt):
@@ -406,6 +414,10 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
             )
         trainer.load_ckpt(ckpt)
         print("Loaded tuned checkpoint from", ckpt)
+
+    # Output path (includes threshold suffix) for saving results
+    out_exp_path = os.path.join(output_base, out_exp_name)
+    os.makedirs(out_exp_path, exist_ok=True)
 
     print("=====no tuning:")
     scores = trainer.evaluate(test_dataloader,
@@ -458,7 +470,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
     _wandb_log(scores, 'udc_tuned')
 
     # Save metrics summary + pred-gold file
-    if trainer.exp_path is not None:
+    if out_exp_path is not None:
         import json
 
         # ── metrics ──────────────────────────────────────────────
@@ -467,7 +479,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
         print("\n===== Inference Metrics =====")
         for k, v in summary.items():
             print("  {}: {:.4f}".format(k, v))
-        metrics_path = os.path.join(trainer.exp_path, 'metrics.json')
+        metrics_path = os.path.join(out_exp_path, 'metrics.json')
         with open(metrics_path, 'w') as f:
             json.dump(summary, f, indent=2)
         print("Metrics saved to", metrics_path)
@@ -482,7 +494,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
             gold = [idx2token[i] for i, v in enumerate(y_true) if v == 1]
             pred = [idx2token[i] for i, v in enumerate(y_pred) if v == 1]
             records.append({'gold': gold, 'pred': pred})
-        pred_gold_path = os.path.join(trainer.exp_path, 'pred_gold.jsonl')
+        pred_gold_path = os.path.join(out_exp_path, 'pred_gold.jsonl')
         with open(pred_gold_path, 'w') as f:
             for r in records:
                 f.write(json.dumps(r) + '\n')

@@ -215,7 +215,7 @@ def run_single_config(pretrain=False, tuning=False, exp_num='', ckpt_exp_num=Non
 
 
     print("=====修正:")
-    model=aug_inference(sample_dataset, pcf_model, plm_model, drl_model, train_dataloader, test_dataloader, config, y_grouped,  p_grouped, special_input=train_dataset, tuning=tuning, exp_num=exp_num)
+    model=aug_inference(sample_dataset, pcf_model, plm_model, drl_model, train_dataloader, test_dataloader, config, y_grouped,  p_grouped, special_input=train_dataset, tuning=tuning, exp_num=exp_num, ckpt_exp_num=ckpt_exp_num)
     print("===============Aug Inference Done!===============")
 
 
