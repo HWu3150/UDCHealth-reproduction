@@ -46,15 +46,11 @@ python main_rec.py --pretrain --exp_num "$EXP" --gpu "$GPU" \
 #   log/ckpt/REC/CUSTOM-Transformer-udc-<EXP>_t02/
 echo ""
 echo "=== [3/3] Aug Inference  threshold=0.4 ==="
-python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.4 \
-    --use_wandb --wandb_project "$WANDB_PROJECT" --wandb_group "$WANDB_GROUP" \
-    --wandb_name "inference-exp${EXP}-t04"
+python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.4
 
 echo ""
 echo "=== [3/3] Aug Inference  threshold=0.2 ==="
-python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.2 \
-    --use_wandb --wandb_project "$WANDB_PROJECT" --wandb_group "$WANDB_GROUP" \
-    --wandb_name "inference-exp${EXP}-t02"
+python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.2
 
 echo ""
 echo "All done!"
