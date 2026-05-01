@@ -209,7 +209,7 @@ def multilabel_metrics_fn(
     y_true: np.ndarray,
     y_prob: np.ndarray,
     metrics: Optional[List[str]] = None,
-    threshold: float = config['THRES'],
+    threshold: float = None,
     y_predset: Optional[np.ndarray] = None,
     aux_data: Optional[Dict[str, Any]] = None,
     patient_ids: Optional[np.ndarray] = None,
@@ -284,6 +284,8 @@ def multilabel_metrics_fn(
         metrics = ["pr_auc_samples"]
     prediction_set_metrics = ['tp', 'fp']
 
+    if threshold is None:
+        threshold = config['THRES']
     y_pred = y_prob.copy()
     y_pred[y_pred >= threshold] = 1
     y_pred[y_pred < threshold] = 0
