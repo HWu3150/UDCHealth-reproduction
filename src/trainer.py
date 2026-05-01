@@ -18,6 +18,11 @@ from typing import Callable, Dict, List, Optional, Type
 import numpy as np
 import torch
 from torch import nn
+
+try:
+    import wandb as _wandb
+except ImportError:
+    _wandb = None
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -268,7 +273,16 @@ class Trainer:
                 logger.info(f"--- Eval epoch-{epoch}, step-{global_step} ---")
                 for key in scores.keys():
                     logger.info("{}: {}".format(key, scores[key]))
-                    # logger.info("{}: {:.4f}".format(key, scores[key]))
+
+                # wandb per-epoch logging
+                if _wandb is not None and _wandb.run is not None:
+                    log_dict = {'train/loss': sum(training_loss) / len(training_loss)}
+                    log_dict.update({
+                        'eval/{}'.format(k): v
+                        for k, v in scores.items()
+                        if not isinstance(v, (list, dict))
+                    })
+                    _wandb.log(log_dict, step=epoch)
 
                 # save best model
                 if monitor is not None:
@@ -431,7 +445,16 @@ class Trainer:
                 logger.info(f"--- Eval epoch-{epoch}, step-{global_step} ---")
                 for key in scores.keys():
                     logger.info("{}: {}".format(key, scores[key]))
-                    # logger.info("{}: {:.4f}".format(key, scores[key]))
+
+                # wandb per-epoch logging
+                if _wandb is not None and _wandb.run is not None:
+                    log_dict = {'train/loss': sum(training_loss) / len(training_loss)}
+                    log_dict.update({
+                        'eval/{}'.format(k): v
+                        for k, v in scores.items()
+                        if not isinstance(v, (list, dict))
+                    })
+                    _wandb.log(log_dict, step=epoch)
 
                 # save best model
                 if monitor is not None:
