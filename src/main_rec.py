@@ -10,6 +10,11 @@
 import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    import wandb as _wandb
+except ImportError:
+    _wandb = None
 import copy
 import gc
 import time
@@ -224,6 +229,13 @@ if __name__ == '__main__':
     parser.add_argument('--thres',    type=float, default=None,
                         help='prediction threshold (overrides config THRES); '
                              'appended to exp_num so results land in a separate dir')
+    parser.add_argument('--use_wandb',     action='store_true', default=False)
+    parser.add_argument('--wandb_project', type=str, default='UDCHealth')
+    parser.add_argument('--wandb_entity',  type=str, default=None)
+    parser.add_argument('--wandb_name',    type=str, default=None)
+    parser.add_argument('--wandb_group',   type=str, default=None)
+    parser.add_argument('--wandb_mode',    type=str, default='online',
+                        choices=['online', 'offline', 'disabled'])
     args = parser.parse_args()
 
     if args.gpu is not None:
@@ -233,7 +245,25 @@ if __name__ == '__main__':
         args.exp_num = args.exp_num + '_t{}'.format(str(args.thres).replace('.', ''))
 
     config['JOINT'] = True
+
+    if args.use_wandb and _wandb is None:
+        raise RuntimeError("wandb not installed. Run: pip install wandb")
+    if args.use_wandb:
+        run_name = args.wandb_name or '{}-{}-exp{}'.format(
+            config['DATASET'], config['PCF_MODEL'], args.exp_num)
+        _wandb.init(
+            project=args.wandb_project,
+            entity=args.wandb_entity,
+            name=run_name,
+            group=args.wandb_group,
+            mode=args.wandb_mode,
+            config={k: v for k, v in config.items() if not callable(v)},
+        )
+
     print("Hi, This is UDC Health!")
     print("You are running on", config['DATASET'], "dataset! THRES={}".format(config['THRES']))
     run_single_config(pretrain=args.pretrain, tuning=args.tuning, exp_num=args.exp_num)
+
+    if args.use_wandb and _wandb is not None and _wandb.run is not None:
+        _wandb.finish()
     print("All Done!")

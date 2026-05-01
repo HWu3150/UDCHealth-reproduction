@@ -22,6 +22,20 @@ from utils import save_pickle, load_pickle
 # from transformers import BioGptTokenizer, BioGptForCausalLM
 from transformers import BioGptTokenizer, BioGptModel
 
+try:
+    import wandb as _wandb
+except ImportError:
+    _wandb = None
+
+def _wandb_log(scores: dict, prefix: str):
+    if _wandb is None or _wandb.run is None:
+        return
+    _wandb.log({
+        '{}/{}'.format(prefix, k): v
+        for k, v in scores.items()
+        if not isinstance(v, (list, dict))  # skip grouped lists
+    })
+
 
 def load_pretrain_pcf(sample_dataset, config, special_input = None, exp_num=''):
     model = underlying_model(config,
@@ -193,6 +207,7 @@ def run_pretrain_pcf(sample_dataset, train_dataloader, test_dataloader, config, 
     print("Final Test")
     scores = trainer.evaluate(test_dataloader, aux_data={'topk':config['TOPK'], 'y_grouped':y_grouped, 'p_grouped':p_grouped})
     print(scores)
+    _wandb_log(scores, 'pcf')
     return trainer.model
 
 
@@ -390,6 +405,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
             print("{}: {}".format(key, scores[key]))  # 列表
         else:
             print("{}: {:4f}".format(key, scores[key]))  # 浮点数
+    _wandb_log(scores, 'udc')
 
 
     if tuning:
@@ -427,6 +443,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
                               aux_data={'topk': config['TOPK'], 'y_grouped': y_grouped, 'p_grouped': p_grouped}
                               )
     print(scores)
+    _wandb_log(scores, 'udc_tuned')
 
     return model
 

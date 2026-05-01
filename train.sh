@@ -4,6 +4,13 @@ set -e
 GPU=${1:-0}
 EXP=${2:-0}
 
+# Optional: set your wandb API key here if not already logged in
+
+WANDB_PROJECT="UDCHealth"
+WANDB_GROUP=""
+WANDB_NAME="UDCHealth"
+export WANDB_API_KEY="your_key_here"
+
 cd "$(dirname "$0")/src"
 
 echo "============================================================"
@@ -27,7 +34,9 @@ fi
 # Both checkpoints are saved to log/ckpt/REC/CUSTOM-Transformer-<exp>/.
 echo ""
 echo "=== [1+2/3] Pretrain PCF + DRL ==="
-python main_rec.py --pretrain --exp_num "$EXP" --gpu "$GPU"
+python main_rec.py --pretrain --exp_num "$EXP" --gpu "$GPU" \
+    --use_wandb --wandb_project "$WANDB_PROJECT" --wandb_group "$WANDB_GROUP" \
+    --wandb_name "pretrain-exp${EXP}"
 
 # ── Step 3: aug inference (two thresholds) ────────────────────
 # Loads saved PCF + DRL checkpoints, refines rare-condition embeddings,
@@ -37,11 +46,15 @@ python main_rec.py --pretrain --exp_num "$EXP" --gpu "$GPU"
 #   log/ckpt/REC/CUSTOM-Transformer-udc-<EXP>_t02/
 echo ""
 echo "=== [3/3] Aug Inference  threshold=0.4 ==="
-python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.4
+python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.4 \
+    --use_wandb --wandb_project "$WANDB_PROJECT" --wandb_group "$WANDB_GROUP" \
+    --wandb_name "inference-exp${EXP}-t04"
 
 echo ""
 echo "=== [3/3] Aug Inference  threshold=0.2 ==="
-python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.2
+python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.2 \
+    --use_wandb --wandb_project "$WANDB_PROJECT" --wandb_group "$WANDB_GROUP" \
+    --wandb_name "inference-exp${EXP}-t02"
 
 echo ""
 echo "All done!"
