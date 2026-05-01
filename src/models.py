@@ -18,7 +18,7 @@ from layer import _get_activation_fn, _get_clones, MLP, Quantize
 from loss import RqVaeLoss
 from torch.nn.utils.rnn import pad_sequence
 from typing import Any, Dict, List, Tuple, Optional, Union
-from basemodel import Transformer, COGNet, SHAPE, StratMed, VITA, HITNet, RAREMed, DEPOT, Dipole
+from basemodel import Transformer
 from pyhealth.models import BaseModel
 # from pyhealth.models.utils import get_last_visit
 from utils import get_last_visit, get_tokenizers, get_name_map, get_last_visit_sample, off_diagonal

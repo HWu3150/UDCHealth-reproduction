@@ -9,14 +9,8 @@
 # Description：
 """
 from .transformer import Transformer
-from .cognet import COGNet
-from .shape import SHAPE
-from .stratmed import StratMed
-from .vita import VITA
-from .hitanet import HITNet
-# from .rarmed import RAREMed
-from .rarmed_simple import RAREMed
-from .depot import DEPOT
-from .dipole import Dipole
 
-__all__ = ['Transformer', 'COGNet', 'SHAPE', 'StratMed', 'VITA', 'HITNet', 'RAREMed', 'DEPOT', 'Dipole']
+# The following models are not included in the open-source release:
+# COGNet, SHAPE, StratMed, VITA, HITNet, RAREMed, DEPOT, Dipole
+
+__all__ = ['Transformer']
