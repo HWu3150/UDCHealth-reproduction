@@ -215,14 +215,25 @@ def run_single_config(pretrain=False, tuning=False,  exp_num=''):
 
 
 if __name__ == '__main__':
-    pretrain=False
-    tuning=True
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pretrain', action='store_true', default=False)
+    parser.add_argument('--tuning',   action='store_true', default=False)
+    parser.add_argument('--exp_num',  type=str, default='0')
+    parser.add_argument('--gpu',      type=str, default=None)
+    parser.add_argument('--thres',    type=float, default=None,
+                        help='prediction threshold (overrides config THRES); '
+                             'appended to exp_num so results land in a separate dir')
+    args = parser.parse_args()
 
-    # config['EPOCH']=0
-    config['JOINT']=True # joint training,要改UDC的forward，要改pretrain的load, pretrain应当设置为True； 还要改DRL的emb 是否可以训练
+    if args.gpu is not None:
+        config['GPU'] = args.gpu
+    if args.thres is not None:
+        config['THRES'] = args.thres
+        args.exp_num = args.exp_num + '_t{}'.format(str(args.thres).replace('.', ''))
 
-    exp_num = '0' # 0为有drug的。1为无drug
+    config['JOINT'] = True
     print("Hi, This is UDC Health!")
-    print("You are running on", config['DATASET'], "dataset!")
-    run_single_config(pretrain=pretrain, tuning=tuning, exp_num=exp_num)
+    print("You are running on", config['DATASET'], "dataset! THRES={}".format(config['THRES']))
+    run_single_config(pretrain=args.pretrain, tuning=args.tuning, exp_num=args.exp_num)
     print("All Done!")
