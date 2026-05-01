@@ -377,7 +377,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
         config=config,
     )
     if config['TASK'] == 'REC':
-        metrics = ['jaccard_samples', 'f1_samples', 'f1_micro', 'pr_auc_samples', 'roc_auc_samples', 'precision_samples', 'recall_samples', 'group_rec']
+        metrics = ['jaccard_samples', 'f1_samples', 'f1_micro', 'pr_auc_samples', 'roc_auc_samples', 'precision_samples', 'recall_samples', 'avg_drug', 'group_rec']
         monitor = 'roc_auc_samples'
 
     elif config['TASK'] == 'DIAG':
@@ -396,6 +396,17 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
     )
     config = config['PCF_CONFIG']
 
+    # Load tuned checkpoint for pure inference runs
+    if not tuning and trainer.exp_path is not None:
+        ckpt = os.path.join(trainer.exp_path, 'best.ckpt')
+        if not os.path.isfile(ckpt):
+            raise FileNotFoundError(
+                "Tuned checkpoint not found: {}\n"
+                "Run with --tuning first to produce it.".format(ckpt)
+            )
+        trainer.load_ckpt(ckpt)
+        print("Loaded tuned checkpoint from", ckpt)
+
     print("=====no tuning:")
     scores = trainer.evaluate(test_dataloader,
                      aux_data={'topk':config['TOPK'], 'y_grouped':y_grouped,'p_grouped':p_grouped}
@@ -403,9 +414,9 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
 
     for key in scores.keys():
         if key.endswith('grouped'):
-            print("{}: {}".format(key, scores[key]))  # 列表
+            print("{}: {}".format(key, scores[key]))
         else:
-            print("{}: {:4f}".format(key, scores[key]))  # 浮点数
+            print("{}: {:4f}".format(key, scores[key]))
     _wandb_log(scores, 'udc')
 
 
@@ -451,7 +462,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
         import json
 
         # ── metrics ──────────────────────────────────────────────
-        metric_keys = ['jaccard_samples', 'f1_micro', 'precision_samples', 'recall_samples']
+        metric_keys = ['jaccard_samples', 'f1_micro', 'precision_samples', 'recall_samples', 'avg_drug']
         summary = {k: float(scores[k]) for k in metric_keys if k in scores}
         print("\n===== Inference Metrics =====")
         for k, v in summary.items():
