@@ -22,13 +22,13 @@ import torch
 from pyhealth.datasets import MIMIC3Dataset, MIMIC4Dataset, SampleEHRDataset, eICUDataset, OMOPDataset
 from utils import split_by_patient, load_pickle, save_pickle, set_random_seed, generate_rare_disease, ana_rare_disease, get_tokenizers, generate_rare_patient
 from data import drug_recommendation_mimic3_fn_wc, drug_recommendation_mimic4_fn_wc, drug_recommendation_eicu_fn_wc, re_generate_dataset, convert_dataset, load_custom_dataset
-from data import drug_recommendation_omop_fn_wc, drug_recommendation_pic_fn_wc, drug_recommendation_omix_fn_wc
+# from data import drug_recommendation_omop_fn_wc, drug_recommendation_pic_fn_wc, drug_recommendation_omix_fn_wc  # not open-sourced
 
 from loader import get_dataloader, raremed_mask_nsp_collate_fn, collate_fn_dict
 from config import config
 from pretrain import run_pretrain_pcf, run_pretrain_drl, aug_inference, load_pretrain_pcf, load_pretrain_plm, load_pretrain_drl, evaluate_pcf
-from pic_parase import PICDataset
-from omix_parse import OMIXDataset
+# from pic_parase import PICDataset   # not open-sourced
+# from omix_parse import OMIXDataset  # not open-sourced
 
 set_random_seed(config['SEED'])
 
