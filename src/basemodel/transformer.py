@@ -15,7 +15,6 @@ from torch.nn.functional import multilabel_margin_loss
 from pyhealth.metrics import ddi_rate_score
 from pyhealth.models.utils import batch_to_multihot
 from pyhealth.models import BaseModel
-from pyhealth.medcode import ATC
 from pyhealth.datasets import SampleEHRDataset
 from pyhealth import BASE_CACHE_PATH as CACHE_PATH
 from config import config
@@ -132,10 +131,7 @@ class Transformer(BaseModel):
         self.label_tokenizer = self.get_label_tokenizer() # 注意这里的drug可没有spec_token; 这里label索引需要加2对于正则化
         self.label_size = self.label_tokenizer.get_vocabulary_size()
 
-        # save ddi adj
         self.ddi_adj = torch.nn.Parameter(self.generate_ddi_adj(), requires_grad=False)
-        ddi_adj = self.generate_ddi_adj() # 用于存储
-        np.save(os.path.join(CACHE_PATH, "ddi_adj.npy"), ddi_adj.numpy()) # 计算ddi直接从这里读取
 
         # module
         self.feature_keys_subs = ['conditions', 'procedures', 'drugs']
@@ -147,22 +143,10 @@ class Transformer(BaseModel):
 
 
     def generate_ddi_adj(self) -> torch.FloatTensor:
-        """Generates the DDI graph adjacency matrix."""
-        atc = ATC()
-        ddi = atc.get_ddi(gamenet_ddi=True) # dataframe，这里使用了gamenet的ddi,不要存储
-        # ddi = pd.read_csv('/home/czhaobo/KnowHealth/data/REC/MIII/processed/ddi_pairs.csv', header=0, index_col=0).values.tolist()
-        vocab_to_index = self.label_tokenizer.vocabulary
-        ddi_adj = np.zeros((self.label_size, self.label_size))
-        ddi_atc3 = [
-            [ATC.convert(l[0], level=3), ATC.convert(l[1], level=3)] for l in ddi # each row
-        ]
-
-        for atc_i, atc_j in ddi_atc3:
-            if atc_i in vocab_to_index and atc_j in vocab_to_index:
-                ddi_adj[vocab_to_index(atc_i), vocab_to_index(atc_j)] = 1
-                ddi_adj[vocab_to_index(atc_j), vocab_to_index(atc_i)] = 1
-        ddi_adj = torch.FloatTensor(ddi_adj)
-        return ddi_adj
+        """Returns a zero DDI adjacency matrix.
+        DDI is not used in training loss; skipping the ATC network download.
+        """
+        return torch.zeros(self.label_size, self.label_size)
 
     def encode_patient(self, feature_key: str, raw_values: List[List[List[str]]]) -> torch.Tensor:
         """Encode patient data."""
