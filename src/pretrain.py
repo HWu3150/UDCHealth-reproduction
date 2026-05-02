@@ -457,7 +457,8 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
         print("Pred-gold saved to", pred_gold_path)
 
     if not tuning:
-        _save_results(scores, scores.pop('_y_true'), scores.pop('_y_prob'), out_exp_path)
+        y_true_all, y_prob_all, _ = trainer.inference(test_dataloader)
+        _save_results(scores, y_true_all, y_prob_all, out_exp_path)
         return model
 
     if tuning:
@@ -496,7 +497,8 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
                               )
     print(scores)
     _wandb_log(scores, 'udc_tuned')
-    _save_results(scores, scores.pop('_y_true'), scores.pop('_y_prob'), out_exp_path)
+    y_true_all, y_prob_all, _ = trainer.inference(test_dataloader)
+    _save_results(scores, y_true_all, y_prob_all, out_exp_path)
 
     return model
 
