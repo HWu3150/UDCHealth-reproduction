@@ -557,6 +557,8 @@ class Trainer:
             metrics_fn = get_metrics_fn(mode)
             scores = metrics_fn(y_true_all, y_prob_all, metrics=self.metrics, aux_data=aux_data, patient_ids=patient_ids)
             scores["loss"] = loss_mean
+            scores["_y_true"] = y_true_all
+            scores["_y_prob"] = y_prob_all
         else:
             loss_all = []
             for data in tqdm(dataloader, desc="Evaluation"):

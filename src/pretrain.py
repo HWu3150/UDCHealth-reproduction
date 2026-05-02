@@ -381,7 +381,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
         config=config,
     )
     if config['TASK'] == 'REC':
-        metrics = ['jaccard_samples', 'f1_samples', 'f1_micro', 'pr_auc_samples', 'roc_auc_samples', 'precision_samples', 'recall_samples', 'avg_drug', 'group_rec']
+        metrics = ['jaccard_samples', 'f1_samples', 'f1_micro', 'pr_auc_samples', 'roc_auc_samples', 'precision_samples', 'recall_samples', 'precision_micro', 'recall_micro', 'avg_drug', 'group_rec']
         monitor = 'roc_auc_samples'
 
     elif config['TASK'] == 'DIAG':
@@ -402,6 +402,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
         output_path=output_base,
         exp_name=ckpt_exp_name,
     )
+    threshold = config.get('THRES', 0.4)
     config = config['PCF_CONFIG']
 
     # For pure inference: load tuned checkpoint (must exist)
@@ -431,9 +432,9 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
             print("{}: {:4f}".format(key, scores[key]))
     _wandb_log(scores, 'udc')
 
-    def _save_results(scores, out_path):
+    def _save_results(scores, y_true_all, y_prob_all, out_path):
         import json
-        metric_keys = ['jaccard_samples', 'f1_micro', 'precision_samples', 'recall_samples', 'avg_drug']
+        metric_keys = ['jaccard_samples', 'f1_micro', 'precision_micro', 'recall_micro', 'avg_drug']
         summary = {k: float(scores[k]) for k in metric_keys if k in scores}
         print("\n===== Inference Metrics =====")
         for k, v in summary.items():
@@ -442,8 +443,6 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
             json.dump(summary, f, indent=2)
         print("Metrics saved to", os.path.join(out_path, 'metrics.json'))
 
-        y_true_all, y_prob_all, _ = trainer.inference(test_dataloader)
-        threshold = config['THRES'] if 'THRES' in config else 0.4
         y_pred_all = (y_prob_all >= threshold).astype(int)
         idx2token = model.label_tokenizer.vocabulary.idx2token
         records = [
@@ -458,7 +457,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
         print("Pred-gold saved to", pred_gold_path)
 
     if not tuning:
-        _save_results(scores, out_exp_path)
+        _save_results(scores, scores.pop('_y_true'), scores.pop('_y_prob'), out_exp_path)
         return model
 
     if tuning:
@@ -497,7 +496,7 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
                               )
     print(scores)
     _wandb_log(scores, 'udc_tuned')
-    _save_results(scores, out_exp_path)
+    _save_results(scores, scores.pop('_y_true'), scores.pop('_y_prob'), out_exp_path)
 
     return model
 
