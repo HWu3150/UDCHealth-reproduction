@@ -146,7 +146,7 @@ def load_pretrain_drl(pcf_model, plm_model, config, exp_num=''):
 
     return model
 
-def run_pretrain_pcf(sample_dataset, train_dataloader, test_dataloader, config, y_grouped=None, p_grouped=None, special_input = None, exp_num=''):
+def run_pretrain_pcf(sample_dataset, train_dataloader, val_dataloader, config, y_grouped=None, p_grouped=None, special_input = None, exp_num=''):
     # model definition
     model = underlying_model(config,
                              sample_dataset,
@@ -177,8 +177,8 @@ def run_pretrain_pcf(sample_dataset, train_dataloader, test_dataloader, config, 
         config = config['PCF_CONFIG']
         trainer.train_prefix(
             train_dataloader=train_dataloader,
-            val_dataloader=test_dataloader,  # test_dataloader,
-            test_dataloader=test_dataloader,  # 检查，可能有东西没保存
+            val_dataloader=val_dataloader,  # 用真正的 val 做早停
+            test_dataloader=val_dataloader,  # 训练阶段不接触 test
             epochs=config['EPOCH'],
             weight_decay=config['WD'],
             # steps_per_epoch=20,  # 检查
@@ -194,8 +194,7 @@ def run_pretrain_pcf(sample_dataset, train_dataloader, test_dataloader, config, 
         config = config['PCF_CONFIG']
         trainer.train(
             train_dataloader=train_dataloader,
-            val_dataloader=test_dataloader, # test_dataloader,
-            # test_dataloader=test_dataloader, # 检查，可能有东西没保存
+            val_dataloader=val_dataloader,  # 用真正的 val 做早停
             epochs=config['EPOCH'],
             weight_decay = config['WD'],
             # steps_per_epoch=200, # 检查
@@ -205,8 +204,8 @@ def run_pretrain_pcf(sample_dataset, train_dataloader, test_dataloader, config, 
             load_best_model_at_last=True,
             aux_data={'topk':config['TOPK'], 'y_grouped':y_grouped, 'p_grouped':p_grouped}
         )
-    print("Final Test")
-    scores = trainer.evaluate(test_dataloader, aux_data={'topk':config['TOPK'], 'y_grouped':y_grouped, 'p_grouped':p_grouped})
+    print("Final Val (during training)")
+    scores = trainer.evaluate(val_dataloader, aux_data={'topk':config['TOPK'], 'y_grouped':y_grouped, 'p_grouped':p_grouped})
     print(scores)
     _wandb_log(scores, 'pcf')
     return trainer.model
@@ -362,7 +361,7 @@ def run_pretrain_drl(disease, sample_dataset, train_dataset, test_dataloader, pc
 
 
 
-def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, test_dataloader, config, y_grouped=None, p_grouped=None, special_input=None, tuning=False, exp_num='', ckpt_exp_num=None, **kwargs):
+def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, test_dataloader, config, y_grouped=None, p_grouped=None, special_input=None, tuning=False, exp_num='', ckpt_exp_num=None, val_dataloader=None, **kwargs):
     # ckpt_exp_num: checkpoint path (no threshold suffix); exp_num: output path (may include threshold suffix)
     if ckpt_exp_num is None:
         ckpt_exp_num = exp_num
@@ -478,10 +477,12 @@ def aug_inference(dataset, pcf_model, plm_model, drl_model, train_dataloader, te
         # for param in model.pcf_model.embeddings['conditions'].parameters(): # 这个倒是真的。 joint
         #     param.requires_grad = False # 交互方式, 这个原本的语义空间感觉一定不能动，一旦动了，就不是原来的语义空间了，那么前者的对齐将毫无用处。
 
+        if val_dataloader is None:
+            raise ValueError("aug_inference with tuning=True requires val_dataloader; "
+                             "do not use test_dataloader for early stopping.")
         trainer.train(
             train_dataloader=train_dataloader,
-            val_dataloader=test_dataloader, # test_dataloader,
-            # test_dataloader=test_dataloader, # 检查，可能有东西没保存
+            val_dataloader=val_dataloader,  # 用真正的 val 做早停
             epochs=config['FINE_EPOCH'],
             weight_decay = config['WD'],
             # steps_per_epoch=200, # 检查

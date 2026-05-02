@@ -144,12 +144,12 @@ def run_single_config(pretrain=False, tuning=False, exp_num='', ckpt_exp_num=Non
             print('Dataset done!, Cost {} s'.format(endt - end))
         else:
             sample_dataset = convert_dataset(samples, dataset_name=config['DATASET'], task_name=config['TASK']) # 需要查看是否需要load_code_convert
-            train_dataset, _, test_dataset = split_by_patient(
+            train_dataset, val_dataset, test_dataset = split_by_patient(
                 sample_dataset, [config['RATIO'], (1 - config['RATIO']) / 2, (1 - config['RATIO']) / 2],
-                train_ratio=1.0,  # Train test split
+                train_ratio=1.0,  # Train/val/test split
                 warm_cold=False,
                 seed=config['SEED']
-            ) # 这样似乎更快，固定随机种子的时候是一样的；
+            ) # val 用于早停，test 仅用于最终评估
 
             tokenizer = get_tokenizers(sample_dataset, special_tokens=[])['conditions']  # 和label一致
             y_grouped = tokenizer.batch_encode_2d(y_grouped, padding=False, truncation=False)
@@ -166,7 +166,7 @@ def run_single_config(pretrain=False, tuning=False, exp_num='', ckpt_exp_num=Non
     else:
         collate_fn = collate_fn_dict
     train_dataloader = get_dataloader(train_dataset, batch_size=config['PCF_CONFIG']['BATCH'], shuffle=True, drop_last=True, collate_fn=collate_fn) # 得明确一下其是否是经过standarlized
-    # val_dataloader = get_dataloader(val_dataset, batch_size=config['BATCH']*5, shuffle=False, drop_last=True)
+    val_dataloader = get_dataloader(val_dataset, batch_size=config['PCF_CONFIG']['BATCH'], shuffle=False, drop_last=False, collate_fn=collate_fn)
     test_dataloader = get_dataloader(test_dataset, batch_size=config['PCF_CONFIG']['BATCH'], shuffle=True, drop_last=True, collate_fn=collate_fn) # config['BATCH']
     load_dataloader = time.time()
     print('Dataloader done!, Cost {} s'.format(load_dataloader - endt))
@@ -185,7 +185,7 @@ def run_single_config(pretrain=False, tuning=False, exp_num='', ckpt_exp_num=Non
         print("===============Pretrain PCF!===============")
         start = time.time()
         # print(sample_dataset.get_all_tokens(key='conditions'))
-        pcf_model = run_pretrain_pcf(sample_dataset, train_dataloader, test_dataloader, config,
+        pcf_model = run_pretrain_pcf(sample_dataset, train_dataloader, val_dataloader, config,
                                      y_grouped=y_grouped, p_grouped=p_grouped, special_input=train_dataset, exp_num=exp_num)
         end = time.time()
         print("Pretrain PCF done! Cost {} s".format(end - start))
@@ -215,7 +215,7 @@ def run_single_config(pretrain=False, tuning=False, exp_num='', ckpt_exp_num=Non
 
 
     print("=====修正:")
-    model=aug_inference(sample_dataset, pcf_model, plm_model, drl_model, train_dataloader, test_dataloader, config, y_grouped,  p_grouped, special_input=train_dataset, tuning=tuning, exp_num=exp_num, ckpt_exp_num=ckpt_exp_num)
+    model=aug_inference(sample_dataset, pcf_model, plm_model, drl_model, train_dataloader, test_dataloader, config, y_grouped,  p_grouped, special_input=train_dataset, tuning=tuning, exp_num=exp_num, ckpt_exp_num=ckpt_exp_num, val_dataloader=val_dataloader)
     print("===============Aug Inference Done!===============")
 
 
