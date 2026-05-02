@@ -45,16 +45,16 @@ python main_rec.py --pretrain --exp_num "$EXP" --gpu "$GPU" \
 #   log/ckpt/REC/CUSTOM-Transformer-udc-<EXP>_t04/
 #   log/ckpt/REC/CUSTOM-Transformer-udc-<EXP>_t02/
 echo ""
-echo "=== [3/3] Aug Inference + Tuning  threshold=0.4 ==="
+echo "=== [3/3a] Aug Inference + Tuning  threshold=0.4  (fine-tunes once) ==="
 python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.4 \
     --use_wandb --wandb_project "$WANDB_PROJECT" --wandb_group "$WANDB_GROUP" \
     --wandb_name "tuning-exp${EXP}-t04"
 
 echo ""
-echo "=== [3/3] Aug Inference + Tuning  threshold=0.2 ==="
-python main_rec.py --tuning --exp_num "$EXP" --gpu "$GPU" --thres 0.2 \
+echo "=== [3/3b] Aug Inference  threshold=0.2  (reuses tuned checkpoint) ==="
+python main_rec.py --exp_num "$EXP" --gpu "$GPU" --thres 0.2 \
     --use_wandb --wandb_project "$WANDB_PROJECT" --wandb_group "$WANDB_GROUP" \
-    --wandb_name "tuning-exp${EXP}-t02"
+    --wandb_name "infer-exp${EXP}-t02"
 
 echo ""
 echo "All done!"
